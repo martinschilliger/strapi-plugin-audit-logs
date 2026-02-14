@@ -58,5 +58,20 @@
   "entry.update": "Entry Update",
   "entry.delete": "Entry Delete",
   "entry.publish": "Entry Publish",
-  "admin.auth.success": "Login"
+  "entry.unpublish": "Entry Unpublish",
+  "media.create": "Media Create",
+  "media.update": "Media Update",
+  "media.delete": "Media Delete",
+  "media-folder.create": "Media Folder Create",
+  "media-folder.update": "Media Folder Update",
+  "media-folder.delete": "Media Folder Delete",
+  "user.create": "User Create",
+  "user.update": "User Update",
+  "user.delete": "User Delete",
+  "role.create": "Role Create",
+  "role.update": "Role Update",
+  "role.delete": "Role Delete",
+  "admin.auth.success": "Login",
+  "admin.auth.failure": "Login Failure",
+  "admin.Logout": "Logout"
 }

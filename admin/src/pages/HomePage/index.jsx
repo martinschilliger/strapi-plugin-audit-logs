@@ -289,6 +289,31 @@ const HomePage = () => {
     setPagination((prev) => ({ ...prev, page: 1 })); // Reset to page 1 when filtering
   };
 
+  const getFilterActionTypes = () => {
+    return [
+      "entry.create",
+      "entry.update",
+      "entry.delete",
+      "entry.publish",
+      "entry.unpublish",
+      "media.create",
+      "media.update",
+      "media.delete",
+      "media-folder.create",
+      "media-folder.update",
+      "media-folder.delete",
+      "user.create",
+      "user.update",
+      "user.delete",
+      "role.create",
+      "role.update",
+      "role.delete",
+      "admin.auth.success",
+      "admin.auth.failure",
+      "admin.logout",
+    ];
+  };
+
   // Clear all filters
   const clearFilters = () => {
     handleFilterChange({
@@ -349,10 +374,10 @@ const HomePage = () => {
           paddingRight={6}
           marginBottom={4}
         >
-          <Flex gap={4} alignItems="end">
+          <Flex gap={4} alignItems="center">
             <TextInput
               placeholder={formatMessage({
-                id: getTrad("table.user"),
+                id: getTrad("filter.user"),
               })}
               value={filters.user}
               onChange={(e) =>
@@ -361,7 +386,7 @@ const HomePage = () => {
             />
             <SingleSelect
               placeholder={formatMessage({
-                id: getTrad("table.actionType"),
+                id: getTrad("filter.action"),
               })}
               value={filters.actionType}
               onChange={(value) =>
@@ -369,78 +394,19 @@ const HomePage = () => {
               }
               onClear={() => handleFilterChange({ ...filters, actionType: "" })}
             >
-              <SingleSelectOption value="entry.create">
-                {formatMessage({
-                  id: getTrad("entry.create"),
-                })}
-              </SingleSelectOption>
-              <SingleSelectOption value="entry.update">
-                {formatMessage({
-                  id: getTrad("entry.update"), // TODO: FUnktioniert nicht
-                })}
-              </SingleSelectOption>
-              <SingleSelectOption value="entry.delete">
-                {formatMessage({
-                  id: getTrad("entry.delete"),
-                })}
-              </SingleSelectOption>
-              <SingleSelectOption value="entry.publish">
-                {formatMessage({
-                  id: getTrad("entry.publish"),
-                })}
-              </SingleSelectOption>
-              <SingleSelectOption value="entry.unpublish">
-                Entry Unpublish
-              </SingleSelectOption>
-              <SingleSelectOption value="media.create">
-                Media Create
-              </SingleSelectOption>
-              <SingleSelectOption value="media.update">
-                Media Update
-              </SingleSelectOption>
-              <SingleSelectOption value="media.delete">
-                Media Delete
-              </SingleSelectOption>
-              <SingleSelectOption value="media-folder.create">
-                Media Folder Create
-              </SingleSelectOption>
-              <SingleSelectOption value="media-folder.update">
-                Media Folder Update
-              </SingleSelectOption>
-              <SingleSelectOption value="media-folder.delete">
-                Media Folder Delete
-              </SingleSelectOption>
-              <SingleSelectOption value="user.create">
-                User Create
-              </SingleSelectOption>
-              <SingleSelectOption value="user.update">
-                User Update
-              </SingleSelectOption>
-              <SingleSelectOption value="user.delete">
-                User Delete
-              </SingleSelectOption>
-              <SingleSelectOption value="role.create">
-                Role Create
-              </SingleSelectOption>
-              <SingleSelectOption value="role.update">
-                Role Update
-              </SingleSelectOption>
-              <SingleSelectOption value="role.delete">
-                Role Delete
-              </SingleSelectOption>
-              <SingleSelectOption value="admin.auth.success">
-                Login Success
-              </SingleSelectOption>
-              <SingleSelectOption value="admin.auth.failure">
-                Login Failure
-              </SingleSelectOption>
-              <SingleSelectOption value="admin.logout">
-                Logout
-              </SingleSelectOption>
+              {getFilterActionTypes().map((actionType) => (
+                <SingleSelectOption key={actionType} value={actionType}>
+                  {formatMessage({
+                    id: getTrad(actionType),
+                  })}
+                </SingleSelectOption>
+              ))}
             </SingleSelect>
             {(filters.user || filters.actionType) && (
               <Button variant="tertiary" onClick={clearFilters}>
-                Clear Filters
+                {formatMessage({
+                  id: getTrad("button.clearFilters"),
+                })}
               </Button>
             )}
           </Flex>
