@@ -37,7 +37,8 @@ const formatDateString = (dateString) => {
       return dateString; // Return original string if invalid
     }
 
-    return new Intl.DateTimeFormat("en-GB", {
+    // using undefined, so that the browsers locale gets used
+    return new Intl.DateTimeFormat(undefined, {
       dateStyle: "short",
       timeStyle: "short",
     }).format(date);
@@ -162,7 +163,7 @@ const HomePage = () => {
   const isSuperAdmin =
     (user?.roles || user?.data?.roles)?.some(
       (role) =>
-        role.code === "strapi-super-admin" || role.name === "Super Admin"
+        role.code === "strapi-super-admin" || role.name === "Super Admin",
     ) || false;
 
   const [logs, setLogs] = useState([]);
@@ -210,7 +211,9 @@ const HomePage = () => {
       console.error("Error fetching logs:", error);
       toggleNotification({
         type: "danger",
-        message: "Failed to fetch audit logs",
+        message: formatMessage({
+          id: getTrad("notification.error.fetch"),
+        }),
       });
     } finally {
       setLoading(false);
@@ -223,13 +226,17 @@ const HomePage = () => {
       await post("/audit-logs/audit-logs/cleanup");
       toggleNotification({
         type: "success",
-        message: "Cleanup completed successfully",
+        message: formatMessage({
+          id: getTrad("notification.success.cleanup"),
+        }),
       });
       fetchLogs();
     } catch (error) {
       toggleNotification({
         type: "danger",
-        message: "Failed to cleanup logs",
+        message: formatMessage({
+          id: getTrad("notification.error.cleanup"),
+        }),
       });
     } finally {
       setIsCleaningUp(false);
@@ -241,7 +248,9 @@ const HomePage = () => {
     if (!isLoadingPermissions && !allowedActions?.canDetails) {
       toggleNotification({
         type: "danger",
-        message: "You don't have permission to view log details",
+        message: formatMessage({
+          id: getTrad("notification.error.permissions"),
+        }),
       });
       return;
     }
@@ -265,7 +274,9 @@ const HomePage = () => {
       } else {
         toggleNotification({
           type: "danger",
-          message: "Failed to fetch log details",
+          message: formatMessage({
+            id: getTrad("notification.error.details"),
+          }),
         });
         setIsModalOpen(false);
       }
@@ -293,8 +304,12 @@ const HomePage = () => {
   return (
     <>
       <Layouts.Header
-        title="Audit Logs"
-        subtitle="Logs of the activities that happened in the environment"
+        title={formatMessage({
+          id: getTrad("page.title"),
+        })}
+        subtitle={formatMessage({
+          id: getTrad("page.subtitle"),
+        })}
         primaryAction={
           <Flex gap={2}>
             <Button
@@ -302,7 +317,9 @@ const HomePage = () => {
               startIcon={<ArrowClockwise />}
               onClick={fetchLogs}
             >
-              Refresh
+              {formatMessage({
+                id: getTrad("button.refresh"),
+              })}
             </Button>
             {isSuperAdmin && (
               <Button
@@ -311,7 +328,9 @@ const HomePage = () => {
                 onClick={handleCleanup}
                 loading={isCleaningUp}
               >
-                Cleanup Logs
+                {formatMessage({
+                  id: getTrad("button.cleanup"),
+                })}
               </Button>
             )}
           </Flex>
@@ -332,14 +351,18 @@ const HomePage = () => {
         >
           <Flex gap={4} alignItems="end">
             <TextInput
-              placeholder="User"
+              placeholder={formatMessage({
+                id: getTrad("table.user"),
+              })}
               value={filters.user}
               onChange={(e) =>
                 handleFilterChange({ ...filters, user: e.target.value })
               }
             />
             <SingleSelect
-              placeholder="Action Type"
+              placeholder={formatMessage({
+                id: getTrad("table.actionType"),
+              })}
               value={filters.actionType}
               onChange={(value) =>
                 handleFilterChange({ ...filters, actionType: value })
@@ -347,16 +370,24 @@ const HomePage = () => {
               onClear={() => handleFilterChange({ ...filters, actionType: "" })}
             >
               <SingleSelectOption value="entry.create">
-                Entry Create
+                {formatMessage({
+                  id: getTrad("entry.create"),
+                })}
               </SingleSelectOption>
               <SingleSelectOption value="entry.update">
-                Entry Update
+                {formatMessage({
+                  id: getTrad("entry.update"), // TODO: FUnktioniert nicht
+                })}
               </SingleSelectOption>
               <SingleSelectOption value="entry.delete">
-                Entry Delete
+                {formatMessage({
+                  id: getTrad("entry.delete"),
+                })}
               </SingleSelectOption>
               <SingleSelectOption value="entry.publish">
-                Entry Publish
+                {formatMessage({
+                  id: getTrad("entry.publish"),
+                })}
               </SingleSelectOption>
               <SingleSelectOption value="entry.unpublish">
                 Entry Unpublish
@@ -425,25 +456,53 @@ const HomePage = () => {
               <Thead>
                 <Tr>
                   <Th>
-                    <Typography variant="sigma">Action</Typography>
+                    <Typography variant="sigma">
+                      {formatMessage({
+                        id: getTrad("table.action"),
+                      })}
+                    </Typography>
                   </Th>
                   <Th>
-                    <Typography variant="sigma">Date</Typography>
+                    <Typography variant="sigma">
+                      {formatMessage({
+                        id: getTrad("table.date"),
+                      })}
+                    </Typography>
                   </Th>
                   <Th>
-                    <Typography variant="sigma">User</Typography>
+                    <Typography variant="sigma">
+                      {formatMessage({
+                        id: getTrad("table.user"),
+                      })}
+                    </Typography>
                   </Th>
                   <Th>
-                    <Typography variant="sigma">Method</Typography>
+                    <Typography variant="sigma">
+                      {formatMessage({
+                        id: getTrad("table.method"),
+                      })}
+                    </Typography>
                   </Th>
                   <Th>
-                    <Typography variant="sigma">Status</Typography>
+                    <Typography variant="sigma">
+                      {formatMessage({
+                        id: getTrad("table.status"),
+                      })}
+                    </Typography>
                   </Th>
                   <Th>
-                    <Typography variant="sigma">IP Address</Typography>
+                    <Typography variant="sigma">
+                      {formatMessage({
+                        id: getTrad("table.ipAddress"),
+                      })}
+                    </Typography>
                   </Th>
                   <Th>
-                    <Typography variant="sigma">Actions</Typography>
+                    <Typography variant="sigma">
+                      {formatMessage({
+                        id: getTrad("table.actions"),
+                      })}
+                    </Typography>
                   </Th>
                 </Tr>
               </Thead>
@@ -452,7 +511,9 @@ const HomePage = () => {
                   <Tr key={log.id}>
                     <Td>
                       <Typography style={getActionBadgeStyle(log.action)}>
-                        {log.action}
+                        {formatMessage({
+                          id: getTrad(log.action),
+                        })}
                       </Typography>
                     </Td>
                     <Td>
@@ -489,11 +550,15 @@ const HomePage = () => {
                           startIcon={<Eye />}
                           onClick={() => handleViewDetails(log.id)}
                         >
-                          View
+                          {formatMessage({
+                            id: getTrad("button.view"),
+                          })}
                         </Button>
                       ) : (
                         <Typography variant="sigma" textColor="neutral500">
-                          No access
+                          {formatMessage({
+                            id: getTrad("button.noAccess"),
+                          })}
                         </Typography>
                       )}
                     </Td>
@@ -531,12 +596,17 @@ const HomePage = () => {
                       <SingleSelectOption value="100">100</SingleSelectOption>
                     </SingleSelect>
                     <Typography variant="pi" textColor="neutral600">
-                      per page
+                      {formatMessage({
+                        id: getTrad("pagination.perPage"),
+                      })}
                     </Typography>
                   </Flex>
 
                   <Typography variant="pi" textColor="neutral500">
-                    {pagination.total} total results
+                    {pagination.total}{" "}
+                    {formatMessage({
+                      id: getTrad("pagination.totalResults"),
+                    })}
                   </Typography>
                 </Flex>
 
@@ -552,11 +622,21 @@ const HomePage = () => {
                       })
                     }
                   >
-                    ← Previous
+                    ←{" "}
+                    {formatMessage({
+                      id: getTrad("pagination.previous"),
+                    })}
                   </Button>
 
                   <Typography variant="pi" textColor="neutral600">
-                    Page {pagination.page} of {pagination.pageCount}
+                    {formatMessage({
+                      id: getTrad("pagination.page"),
+                    })}{" "}
+                    {pagination.page}{" "}
+                    {formatMessage({
+                      id: getTrad("pagination.of"),
+                    })}{" "}
+                    {pagination.pageCount}
                   </Typography>
 
                   <Button
@@ -570,7 +650,10 @@ const HomePage = () => {
                       })
                     }
                   >
-                    Next →
+                    {formatMessage({
+                      id: getTrad("pagination.next"),
+                    })}{" "}
+                    →
                   </Button>
 
                   {/* Quick jump to pages */}
@@ -587,7 +670,7 @@ const HomePage = () => {
                         (page, index, arr) =>
                           page > 0 &&
                           page <= pagination.pageCount &&
-                          arr.indexOf(page) === index
+                          arr.indexOf(page) === index,
                       )
                       .sort((a, b) => a - b)
                       .map((page, index, arr) => (
@@ -633,7 +716,9 @@ const HomePage = () => {
           >
             <Dialog.Header>
               <Typography variant="beta" fontWeight="bold">
-                Audit Log Details
+                {formatMessage({
+                  id: getTrad("modal.title"),
+                })}
               </Typography>
             </Dialog.Header>
 
@@ -647,7 +732,12 @@ const HomePage = () => {
               {!selectedLog ? (
                 <Box padding={8} textAlign="center">
                   <Loader />
-                  <Typography paddingTop={2}>Loading log details...</Typography>
+                  <Typography paddingTop={2}>
+                    {formatMessage({
+                      id: getTrad("loading"),
+                    })}{" "}
+                    log details...
+                  </Typography>
                 </Box>
               ) : (
                 <Box
@@ -659,7 +749,10 @@ const HomePage = () => {
                   <Flex direction="column" alignItems="stretch" gap={3}>
                     <Flex justifyContent="space-between" alignItems="center">
                       <Typography fontWeight="semiBold" textColor="neutral800">
-                        Action:
+                        {formatMessage({
+                          id: getTrad("modal.action"),
+                        })}
+                        :
                       </Typography>
                       <Box
                         padding={1}
@@ -673,14 +766,18 @@ const HomePage = () => {
                           fontWeight="bold"
                           style={{ textTransform: "uppercase" }}
                         >
-                          {selectedLog.action || "N/A"}
+                          {formatMessage({
+                            id: getTrad(selectedLog.action),
+                          }) || "N/A"}
                         </Typography>
                       </Box>
                     </Flex>
 
                     <Flex justifyContent="space-between" alignItems="center">
                       <Typography fontWeight="semiBold" textColor="neutral800">
-                        Date:
+                        {formatMessage({
+                          id: getTrad("modal.date"),
+                        })}
                       </Typography>
                       <Typography variant="pi">
                         {(() => {
@@ -691,7 +788,9 @@ const HomePage = () => {
                           try {
                             const date = new Date(dateValue);
                             if (isNaN(date.getTime())) return dateValue;
-                            return new Intl.DateTimeFormat("en-GB", {
+
+                            // using undefined, so that the browsers locale gets used
+                            return new Intl.DateTimeFormat(undefined, {
                               dateStyle: "full",
                               timeStyle: "long",
                             }).format(date);
@@ -704,7 +803,10 @@ const HomePage = () => {
 
                     <Flex justifyContent="space-between" alignItems="center">
                       <Typography fontWeight="semiBold" textColor="neutral800">
-                        User:
+                        {formatMessage({
+                          id: getTrad("modal.user"),
+                        })}
+                        :
                       </Typography>
                       <Typography variant="pi">
                         {getUserDisplay(selectedLog.user)}
@@ -717,7 +819,10 @@ const HomePage = () => {
                           fontWeight="semiBold"
                           textColor="neutral800"
                         >
-                          Endpoint:
+                          {formatMessage({
+                            id: getTrad("modal.endpoint"),
+                          })}
+                          :
                         </Typography>
                         <Typography variant="pi" fontFamily="Monaco, monospace">
                           {selectedLog.endpoint || selectedLog.url}
@@ -731,7 +836,10 @@ const HomePage = () => {
                           fontWeight="semiBold"
                           textColor="neutral800"
                         >
-                          Method:
+                          {formatMessage({
+                            id: getTrad("modal.method"),
+                          })}
+                          :
                         </Typography>
                         <Typography variant="pi" fontWeight="bold">
                           {selectedLog.method}
@@ -745,7 +853,10 @@ const HomePage = () => {
                           fontWeight="semiBold"
                           textColor="neutral800"
                         >
-                          Status:
+                          {formatMessage({
+                            id: getTrad("modal.status"),
+                          })}
+                          :
                         </Typography>
                         <Box
                           padding={1}
@@ -767,7 +878,10 @@ const HomePage = () => {
                           fontWeight="semiBold"
                           textColor="neutral800"
                         >
-                          IP Address:
+                          {formatMessage({
+                            id: getTrad("modal.ipAddress"),
+                          })}
+                          :
                         </Typography>
                         <Typography variant="pi" fontFamily="Monaco, monospace">
                           {selectedLog.ipAddress}
@@ -782,7 +896,10 @@ const HomePage = () => {
                           textColor="neutral800"
                           paddingBottom={2}
                         >
-                          User Agent:
+                          {formatMessage({
+                            id: getTrad("modal.userAgent"),
+                          })}
+                          :
                         </Typography>
                         <Box
                           background="neutral0"
@@ -804,7 +921,10 @@ const HomePage = () => {
                           textColor="neutral800"
                           paddingBottom={2}
                         >
-                          Data:
+                          {formatMessage({
+                            id: getTrad("modal.payload"),
+                          })}
+                          :
                         </Typography>
                         <Box
                           background="neutral0"
@@ -859,7 +979,9 @@ const HomePage = () => {
 
             <Dialog.Footer>
               <Button onClick={() => setIsModalOpen(false)} variant="secondary">
-                Close
+                {formatMessage({
+                  id: getTrad("modal.close"),
+                })}
               </Button>
             </Dialog.Footer>
           </Dialog.Content>
