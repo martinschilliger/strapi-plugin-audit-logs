@@ -50,9 +50,9 @@ const getUserDisplay = (user) => {
   if (!user) return "System";
   if (typeof user === "string") return user;
   return (
+    `${user.firstname || ""} ${user.lastname || ""}`.trim() ||
     user.username ||
     user.email ||
-    `${user.firstname || ""} ${user.lastname || ""}`.trim() ||
     "User"
   );
 };
