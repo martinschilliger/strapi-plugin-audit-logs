@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import {
   Box,
   Typography,
-  Link,
+  Badge,
   Loader,
   Table,
   Thead,
@@ -11,13 +11,14 @@ import {
   Th,
   Td,
   Button,
+  LinkButton,
   Flex,
   TextInput,
   SingleSelect,
   SingleSelectOption,
   Dialog,
 } from "@strapi/design-system";
-import { Eye, Trash, ArrowClockwise } from "@strapi/icons";
+import { Eye, ExternalLink, ArrowClockwise } from "@strapi/icons";
 import { useIntl } from "react-intl";
 import {
   useFetchClient,
@@ -61,45 +62,26 @@ const getUserDisplay = (user) => {
 };
 
 // Helper function to get badge style based on action
-const getActionBadgeStyle = (action) => {
-  let backgroundColor = "#f6f6f9"; // neutral/gray
-  let color = "#32324d";
-
+const getActionBadge = (action, text) => {
+  let variant = "secondary";
   if (action && typeof action === "string") {
     const actionLower = action.toLowerCase();
-
     if (actionLower.includes("create") || actionLower.includes("success")) {
-      backgroundColor = "#c6f7d0"; // green
-      color = "#2f755a";
+      variant = "success";
     } else if (actionLower.includes("update")) {
-      backgroundColor = "#e0e6ff"; // blue
-      color = "#4945ff";
+      let variant = "primary";
     } else if (actionLower.includes("delete")) {
-      backgroundColor = "#ffe6e6"; // red
-      color = "#d02b20";
+      let variant = "danger";
     } else if (actionLower.includes("publish")) {
-      backgroundColor = "#c6f7d0"; // success green
-      color = "#2f755a";
+      variant = "success";
     } else if (actionLower.includes("unpublish")) {
-      backgroundColor = "#fff3cd"; // warning yellow
-      color = "#856404";
+      variant = "warning";
     } else if (actionLower.includes("logout")) {
-      backgroundColor = "#e0e6ff"; // blue
-      color = "#4945ff";
+      let variant = "primary";
     }
   }
 
-  return {
-    backgroundColor,
-    color,
-    padding: "4px 8px",
-    borderRadius: "4px",
-    fontSize: "12px",
-    fontWeight: "600",
-    textTransform: "uppercase",
-    display: "inline-block",
-    border: `1px solid ${backgroundColor}`,
-  };
+  return <Badge variant={variant}>{text}</Badge>;
 };
 
 // Helper function to get status badge style
@@ -129,9 +111,9 @@ const getStatusBadgeStyle = (status) => {
 };
 
 const HomePage = () => {
-  const { formatMessage } = useIntl();
   const { get, post } = useFetchClient();
   const { toggleNotification } = useNotification();
+  const { formatMessage } = useIntl();
 
   const [config, setConfig] = useState(null);
 
@@ -221,6 +203,18 @@ const HomePage = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchUIDTitle = async () => {
+    try {
+      const response = await get(
+        "/content-manager/collection-types/api::event.event/n9thk177ozdx2rxnnyo8n2u0",
+      );
+      // Extract the actual user data from the nested structure
+      setUser(response.data?.data || response.data);
+    } catch (error) {
+      console.log({ response, error });
     }
   };
 
@@ -449,11 +443,12 @@ const HomePage = () => {
                       if (column === "action") {
                         return (
                           <Td key={column}>
-                            <Typography style={getActionBadgeStyle(log.action)}>
-                              {formatMessage({
+                            {getActionBadge(
+                              log.action,
+                              formatMessage({
                                 id: getTrad(log.action),
-                              })}
-                            </Typography>
+                              }),
+                            )}
                           </Td>
                         );
                       } else if (column === "date") {
@@ -500,6 +495,30 @@ const HomePage = () => {
                             </Typography>
                           </Td>
                         );
+                      } else if (column === "uid") {
+                        console.log({ column, log });
+
+                        if (
+                          !log.endpoint.includes(
+                            "/content-manager/collection-types",
+                          )
+                        )
+                          return <Td key={column}></Td>;
+
+                        return (
+                          <Td key={column}>
+                            <Box marginBottom={2}>
+                              <Typography variant="epsilon">
+                                {log.payload.data.data?.title || ""}
+                              </Typography>
+                            </Box>
+                            <Typography variant="sigma">
+                              {formatMessage({
+                                id: log.payload.uid,
+                              })}
+                            </Typography>
+                          </Td>
+                        );
                       } else if (column === "entry") {
                         console.log({ column, log });
 
@@ -512,13 +531,14 @@ const HomePage = () => {
 
                         return (
                           <Td key={column}>
-                            <Link
+                            <LinkButton
+                              variant="secondary"
                               href={`/admin/content-manager/collection-types/${log.payload.uid}/${log.payload.id}`}
                             >
                               {formatMessage({
                                 id: getTrad("entry.show"),
                               })}
-                            </Link>
+                            </LinkButton>
                           </Td>
                         );
                       }
@@ -526,12 +546,12 @@ const HomePage = () => {
                     <Td>
                       {!isLoadingPermissions && allowedActions?.canDetails ? (
                         <Button
-                          variant="ghost"
+                          variant="secondary"
                           startIcon={<Eye />}
                           onClick={() => handleViewDetails(log.id)}
                         >
                           {formatMessage({
-                            id: getTrad("button.view"),
+                            id: getTrad("button.viewDetails"),
                           })}
                         </Button>
                       ) : (
@@ -742,17 +762,13 @@ const HomePage = () => {
                         paddingLeft={2}
                         paddingRight={2}
                         hasRadius
-                        style={getActionBadgeStyle(selectedLog.action)}
                       >
-                        <Typography
-                          variant="pi"
-                          fontWeight="bold"
-                          style={{ textTransform: "uppercase" }}
-                        >
-                          {formatMessage({
+                        {getActionBadge(
+                          selectedLog.action,
+                          formatMessage({
                             id: getTrad(selectedLog.action),
-                          }) || "N/A"}
-                        </Typography>
+                          }),
+                        )}
                       </Box>
                     </Flex>
 
