@@ -47,5 +47,17 @@ module.exports = {
       ],
     },
   },
+  adminPanelConfig: {
+    indexTableColumns: [
+      "action",
+      "date",
+      "user",
+      "method",
+      "status",
+      "ipAddress",
+      "entry",
+      "actions",
+    ],
+  },
   validator: () => {},
 };

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import {
   Box,
   Typography,
+  Link,
   Loader,
   Table,
   Thead,
@@ -25,6 +26,7 @@ import {
   useRBAC,
 } from "@strapi/strapi/admin";
 import getTrad from "../../utils/getTrad";
+import { fetchPluginConfig } from "../../api/config";
 
 // Utility functions
 const formatDateString = (dateString) => {
@@ -130,6 +132,8 @@ const HomePage = () => {
   const { formatMessage } = useIntl();
   const { get, post } = useFetchClient();
   const { toggleNotification } = useNotification();
+
+  const [config, setConfig] = useState(null);
 
   // Check permissions for details access - using the correct Strapi v5 format
   const { isLoading: isLoadingPermissions, allowedActions } = useRBAC([
@@ -326,6 +330,9 @@ const HomePage = () => {
     fetchLogs();
   }, [pagination.page, pagination.pageSize, filters.user, filters.actionType]);
 
+  useEffect(async () => {
+    fetchPluginConfig().then(setConfig);
+  }, []);
   return (
     <>
       <Layouts.Header
@@ -418,97 +425,104 @@ const HomePage = () => {
           </Box>
         ) : (
           <>
-            <Table colCount={7} rowCount={logs.length}>
+            <Table
+              colCount={config.indexTableColumns.length}
+              rowCount={logs.length}
+            >
               <Thead>
                 <Tr>
-                  <Th>
-                    <Typography variant="sigma">
-                      {formatMessage({
-                        id: getTrad("table.action"),
-                      })}
-                    </Typography>
-                  </Th>
-                  <Th>
-                    <Typography variant="sigma">
-                      {formatMessage({
-                        id: getTrad("table.date"),
-                      })}
-                    </Typography>
-                  </Th>
-                  <Th>
-                    <Typography variant="sigma">
-                      {formatMessage({
-                        id: getTrad("table.user"),
-                      })}
-                    </Typography>
-                  </Th>
-                  <Th>
-                    <Typography variant="sigma">
-                      {formatMessage({
-                        id: getTrad("table.method"),
-                      })}
-                    </Typography>
-                  </Th>
-                  <Th>
-                    <Typography variant="sigma">
-                      {formatMessage({
-                        id: getTrad("table.status"),
-                      })}
-                    </Typography>
-                  </Th>
-                  <Th>
-                    <Typography variant="sigma">
-                      {formatMessage({
-                        id: getTrad("table.ipAddress"),
-                      })}
-                    </Typography>
-                  </Th>
-                  <Th>
-                    <Typography variant="sigma">
-                      {formatMessage({
-                        id: getTrad("table.actions"),
-                      })}
-                    </Typography>
-                  </Th>
+                  {config.indexTableColumns.map((column) => (
+                    <Th>
+                      <Typography variant="sigma">
+                        {formatMessage({
+                          id: getTrad(`table.${column}`),
+                        })}
+                      </Typography>
+                    </Th>
+                  ))}
                 </Tr>
               </Thead>
               <Tbody>
                 {logs.map((log) => (
                   <Tr key={log.id}>
-                    <Td>
-                      <Typography style={getActionBadgeStyle(log.action)}>
-                        {formatMessage({
-                          id: getTrad(log.action),
-                        })}
-                      </Typography>
-                    </Td>
-                    <Td>
-                      <Typography variant="sigma">
-                        {formatDateString(log.date)}
-                      </Typography>
-                    </Td>
-                    <Td>
-                      <Typography variant="sigma">
-                        {getUserDisplay(log.user)}
-                      </Typography>
-                    </Td>
-                    <Td>
-                      <Typography variant="sigma">
-                        {log.method || "-"}
-                      </Typography>
-                    </Td>
-                    <Td>
-                      {log.statusCode && (
-                        <Typography style={getStatusBadgeStyle(log.statusCode)}>
-                          {log.statusCode}
-                        </Typography>
-                      )}
-                    </Td>
-                    <Td>
-                      <Typography variant="sigma">
-                        {log.ipAddress || "-"}
-                      </Typography>
-                    </Td>
+                    {config.indexTableColumns.map((column) => {
+                      if (column === "action") {
+                        return (
+                          <Td key={column}>
+                            <Typography style={getActionBadgeStyle(log.action)}>
+                              {formatMessage({
+                                id: getTrad(log.action),
+                              })}
+                            </Typography>
+                          </Td>
+                        );
+                      } else if (column === "date") {
+                        return (
+                          <Td key={column}>
+                            <Typography variant="sigma">
+                              {formatDateString(log.date)}
+                            </Typography>
+                          </Td>
+                        );
+                      } else if (column === "user") {
+                        return (
+                          <Td key={column}>
+                            <Typography variant="sigma">
+                              {getUserDisplay(log.user)}
+                            </Typography>
+                          </Td>
+                        );
+                      } else if (column === "method") {
+                        return (
+                          <Td key={column}>
+                            <Typography variant="sigma">
+                              {log.method || "-"}
+                            </Typography>
+                          </Td>
+                        );
+                      } else if (column === "status") {
+                        return (
+                          <Td key={column}>
+                            {log.statusCode && (
+                              <Typography
+                                style={getStatusBadgeStyle(log.statusCode)}
+                              >
+                                {log.statusCode}
+                              </Typography>
+                            )}
+                          </Td>
+                        );
+                      } else if (column === "ipAddress") {
+                        return (
+                          <Td key={column}>
+                            <Typography variant="sigma">
+                              {log.ipAddress || "-"}
+                            </Typography>
+                          </Td>
+                        );
+                      } else if (column === "entry") {
+                        console.log({ column, log });
+
+                        if (
+                          !log.endpoint.includes(
+                            "/content-manager/collection-types",
+                          )
+                        )
+                          return <Td key={column}></Td>;
+
+                        return (
+                          <Td key={column}>
+                            <Link
+                              href={`/admin/content-manager/collection-types/${log.payload.uid}/${log.payload.id}`}
+                            >
+                              {formatMessage({
+                                id: getTrad("entry.show"),
+                              })}
+                            </Link>
+                          </Td>
+                        );
+                      }
+                    })}
                     <Td>
                       {!isLoadingPermissions && allowedActions?.canDetails ? (
                         <Button
@@ -544,7 +558,10 @@ const HomePage = () => {
                 >
                   <Flex gap={2} alignItems="center">
                     <Typography variant="pi" textColor="neutral600">
-                      Show:
+                      {formatMessage({
+                        id: getTrad("pagination.show"),
+                      })}
+                      :
                     </Typography>
                     <SingleSelect
                       value={pagination.pageSize}
