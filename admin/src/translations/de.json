@@ -3,6 +3,8 @@
   "plugin.description": "Audit-Protokolle für Strapi verfolgen und verwalten",
   "page.title": "Audit-Protokolle",
   "page.subtitle": "Protokolle der Aktivitäten, die in Strapi stattgefunden haben",
+  "fallback.system": "System",
+  "fallback.user": "Benutzer",
   "table.action": "Aktion",
   "table.actionType": "Aktionstyp",
   "table.date": "Datum",
@@ -50,8 +52,10 @@
   "modal.requestBody": "Request-Body",
   "modal.responseBody": "Response-Body",
   "modal.payload": "Übertragene Daten",
+  "modal.noAdditionalData": "Keine weiteren Daten verfügbar",
   "modal.close": "Schliessen",
   "loading": "Lädt…",
+  "loading.details": "Protokolldetails werden geladen...",
   "filter.action": "Nach Aktion filtern",
   "filter.user": "Nach Benutzer filtern",
   "filter.actionType": "Aktionstyp",
@@ -77,5 +81,5 @@
   "role.delete": "Rolle löschen",
   "admin.auth.success": "Login",
   "admin.auth.failure": "Login Fehler",
-  "admin.Logout": "Logout"
+  "admin.logout": "Logout"
 }

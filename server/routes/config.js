@@ -4,7 +4,15 @@ module.exports = [
     path: "/config",
     handler: "config.get",
     config: {
-      policies: ["admin::isAuthenticatedAdmin"],
+      policies: [
+        "admin::isAuthenticatedAdmin",
+        {
+          name: "admin::hasPermissions",
+          config: {
+            actions: ["plugin::audit-logs.read"],
+          },
+        },
+      ],
     },
   },
 ];

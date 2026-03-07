@@ -1,99 +1,118 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  Box,
-  Typography,
   Badge,
-  Loader,
-  Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
+  Box,
   Button,
-  LinkButton,
+  Dialog,
   Flex,
-  TextInput,
+  LinkButton,
+  Loader,
   SingleSelect,
   SingleSelectOption,
-  Dialog,
+  Table,
+  Tbody,
+  Td,
+  TextInput,
+  Th,
+  Thead,
+  Tr,
+  Typography,
 } from "@strapi/design-system";
-import { Eye, ExternalLink, ArrowClockwise } from "@strapi/icons";
+import { ArrowClockwise, Eye } from "@strapi/icons";
 import { useIntl } from "react-intl";
 import {
+  Layouts,
   useFetchClient,
   useNotification,
-  Layouts,
   useRBAC,
 } from "@strapi/strapi/admin";
-import getTrad from "../../utils/getTrad";
 import { fetchPluginConfig } from "../../api/config";
+import getTrad from "../../utils/getTrad";
 
-// Utility functions
-const formatDateString = (dateString) => {
+const DEFAULT_INDEX_TABLE_COLUMNS = [
+  "action",
+  "date",
+  "user",
+  "method",
+  "status",
+  "ipAddress",
+  "entry",
+];
+
+const ACTION_TYPES = [
+  "entry.create",
+  "entry.update",
+  "entry.delete",
+  "entry.publish",
+  "entry.unpublish",
+  "media.create",
+  "media.update",
+  "media.delete",
+  "media-folder.create",
+  "media-folder.update",
+  "media-folder.delete",
+  "user.create",
+  "user.update",
+  "user.delete",
+  "role.create",
+  "role.update",
+  "role.delete",
+  "admin.auth.success",
+  "admin.auth.failure",
+  "admin.logout",
+];
+
+const formatDateString = (dateString, options = {}) => {
   if (!dateString) return "-";
 
   try {
     const date = new Date(dateString);
-    // Check if the date is valid
-    if (isNaN(date.getTime())) {
-      return dateString; // Return original string if invalid
+
+    if (Number.isNaN(date.getTime())) {
+      return dateString;
     }
 
-    // using undefined, so that the browsers locale gets used
     return new Intl.DateTimeFormat(undefined, {
       dateStyle: "short",
       timeStyle: "short",
+      ...options,
     }).format(date);
   } catch (error) {
     return dateString || "-";
   }
 };
 
-const getUserDisplay = (user) => {
-  if (!user) return "System";
-  if (typeof user === "string") return user;
-  return (
-    `${user.firstname || ""} ${user.lastname || ""}`.trim() ||
-    user.username ||
-    user.email ||
-    "User"
-  );
-};
-
-// Helper function to get badge style based on action
 const getActionBadge = (action, text) => {
   let variant = "secondary";
+
   if (action && typeof action === "string") {
     const actionLower = action.toLowerCase();
+
     if (actionLower.includes("create") || actionLower.includes("success")) {
       variant = "success";
-    } else if (actionLower.includes("update")) {
-      let variant = "primary";
+    } else if (actionLower.includes("update") || actionLower.includes("logout")) {
+      variant = "primary";
     } else if (actionLower.includes("delete")) {
-      let variant = "danger";
-    } else if (actionLower.includes("publish")) {
-      variant = "success";
+      variant = "danger";
     } else if (actionLower.includes("unpublish")) {
       variant = "warning";
-    } else if (actionLower.includes("logout")) {
-      let variant = "primary";
+    } else if (actionLower.includes("publish")) {
+      variant = "success";
     }
   }
 
   return <Badge variant={variant}>{text}</Badge>;
 };
 
-// Helper function to get status badge style
 const getStatusBadgeStyle = (status) => {
-  let backgroundColor = "#f6f6f9"; // neutral
+  let backgroundColor = "#f6f6f9";
   let color = "#32324d";
 
   if (status >= 200 && status < 300) {
-    backgroundColor = "#c6f7d0"; // green
+    backgroundColor = "#c6f7d0";
     color = "#2f755a";
   } else if (status >= 400) {
-    backgroundColor = "#ffe6e6"; // red
+    backgroundColor = "#ffe6e6";
     color = "#d02b20";
   }
 
@@ -110,14 +129,19 @@ const getStatusBadgeStyle = (status) => {
   };
 };
 
+const canOpenEntry = (log) =>
+  log?.action?.startsWith("entry.") &&
+  Boolean(log?.payload?.uid) &&
+  Boolean(log?.payload?.id);
+
 const HomePage = () => {
+  const { formatMessage } = useIntl();
   const { get, post } = useFetchClient();
   const { toggleNotification } = useNotification();
-  const { formatMessage } = useIntl();
+  const [config, setConfig] = useState({
+    indexTableColumns: DEFAULT_INDEX_TABLE_COLUMNS,
+  });
 
-  const [config, setConfig] = useState(null);
-
-  // Check permissions for details access - using the correct Strapi v5 format
   const { isLoading: isLoadingPermissions, allowedActions } = useRBAC([
     {
       action: "plugin::audit-logs.details",
@@ -125,33 +149,7 @@ const HomePage = () => {
     },
   ]);
 
-  // Get user info using a direct API call instead of useAuth
   const [user, setUser] = useState(null);
-  const [isLoadingUser, setIsLoadingUser] = useState(true);
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const response = await get("/admin/users/me");
-        // Extract the actual user data from the nested structure
-        setUser(response.data?.data || response.data);
-      } catch (error) {
-        setUser(null);
-      } finally {
-        setIsLoadingUser(false);
-      }
-    };
-
-    fetchUser();
-  }, [get]);
-
-  // Check if user is super admin - handle both nested and flat structure
-  const isSuperAdmin =
-    (user?.roles || user?.data?.roles)?.some(
-      (role) =>
-        role.code === "strapi-super-admin" || role.name === "Super Admin",
-    ) || false;
-
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({
@@ -168,6 +166,28 @@ const HomePage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCleaningUp, setIsCleaningUp] = useState(false);
 
+  const getUserDisplay = (auditUser) => {
+    if (!auditUser) {
+      return formatMessage({ id: getTrad("fallback.system") });
+    }
+
+    if (typeof auditUser === "string") {
+      return auditUser;
+    }
+
+    return (
+      `${auditUser.firstname || ""} ${auditUser.lastname || ""}`.trim() ||
+      auditUser.username ||
+      auditUser.email ||
+      formatMessage({ id: getTrad("fallback.user") })
+    );
+  };
+
+  const getDisplayColumns = () =>
+    Array.isArray(config?.indexTableColumns)
+      ? config.indexTableColumns
+      : DEFAULT_INDEX_TABLE_COLUMNS;
+
   const buildQueryParams = () => {
     const params = new URLSearchParams({
       page: pagination.page,
@@ -175,10 +195,10 @@ const HomePage = () => {
       sort: "date:desc",
     });
 
-    // Only add filters if they have values
     if (filters.user && filters.user.trim()) {
       params.append("user", filters.user.trim());
     }
+
     if (filters.actionType && filters.actionType.trim()) {
       params.append("action", filters.actionType.trim());
     }
@@ -188,9 +208,11 @@ const HomePage = () => {
 
   const fetchLogs = async () => {
     setLoading(true);
+
     try {
       const query = buildQueryParams();
       const { data } = await get(`/audit-logs/audit-logs?${query}`);
+
       setLogs(data.data);
       setPagination(data.meta.pagination);
     } catch (error) {
@@ -206,20 +228,9 @@ const HomePage = () => {
     }
   };
 
-  const fetchUIDTitle = async () => {
-    try {
-      const response = await get(
-        "/content-manager/collection-types/api::event.event/n9thk177ozdx2rxnnyo8n2u0",
-      );
-      // Extract the actual user data from the nested structure
-      setUser(response.data?.data || response.data);
-    } catch (error) {
-      console.log({ response, error });
-    }
-  };
-
   const handleCleanup = async () => {
     setIsCleaningUp(true);
+
     try {
       await post("/audit-logs/audit-logs/cleanup");
       toggleNotification({
@@ -242,7 +253,6 @@ const HomePage = () => {
   };
 
   const handleViewDetails = async (logId) => {
-    // Check if user has permission to view details
     if (!isLoadingPermissions && !allowedActions?.canDetails) {
       toggleNotification({
         type: "danger",
@@ -254,19 +264,16 @@ const HomePage = () => {
     }
 
     try {
-      setIsModalOpen(true); // Open modal first
+      setIsModalOpen(true);
       const response = await get(`/audit-logs/audit-logs/${logId}`);
-
-      // Find the log in the current logs array as fallback
       const fallbackLog = logs.find((log) => log.id === logId);
 
-      // Use response data if available, otherwise use fallback
       setSelectedLog(response.data?.data || response.data || fallbackLog);
     } catch (error) {
       console.error("Failed to fetch log details:", error);
 
-      // Use the log from current list as fallback
       const fallbackLog = logs.find((log) => log.id === logId);
+
       if (fallbackLog) {
         setSelectedLog(fallbackLog);
       } else {
@@ -281,38 +288,11 @@ const HomePage = () => {
     }
   };
 
-  // Reset pagination when filters change
   const handleFilterChange = (newFilters) => {
     setFilters(newFilters);
-    setPagination((prev) => ({ ...prev, page: 1 })); // Reset to page 1 when filtering
+    setPagination((prev) => ({ ...prev, page: 1 }));
   };
 
-  const getFilterActionTypes = () => {
-    return [
-      "entry.create",
-      "entry.update",
-      "entry.delete",
-      "entry.publish",
-      "entry.unpublish",
-      "media.create",
-      "media.update",
-      "media.delete",
-      "media-folder.create",
-      "media-folder.update",
-      "media-folder.delete",
-      "user.create",
-      "user.update",
-      "user.delete",
-      "role.create",
-      "role.update",
-      "role.delete",
-      "admin.auth.success",
-      "admin.auth.failure",
-      "admin.logout",
-    ];
-  };
-
-  // Clear all filters
   const clearFilters = () => {
     handleFilterChange({
       user: "",
@@ -321,12 +301,45 @@ const HomePage = () => {
   };
 
   useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const response = await get("/admin/users/me");
+        setUser(response.data?.data || response.data);
+      } catch (error) {
+        setUser(null);
+      }
+    };
+
+    fetchUser();
+  }, [get]);
+
+  useEffect(() => {
     fetchLogs();
   }, [pagination.page, pagination.pageSize, filters.user, filters.actionType]);
 
-  useEffect(async () => {
-    fetchPluginConfig().then(setConfig);
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        const pluginConfig = await fetchPluginConfig();
+        if (Array.isArray(pluginConfig?.indexTableColumns)) {
+          setConfig(pluginConfig);
+        }
+      } catch (error) {
+        setConfig({ indexTableColumns: DEFAULT_INDEX_TABLE_COLUMNS });
+      }
+    };
+
+    loadConfig();
   }, []);
+
+  const isSuperAdmin =
+    (user?.roles || user?.data?.roles)?.some(
+      (role) =>
+        role.code === "strapi-super-admin" || role.name === "Super Admin",
+    ) || false;
+
+  const displayColumns = getDisplayColumns();
+
   return (
     <>
       <Layouts.Header
@@ -364,7 +377,6 @@ const HomePage = () => {
       />
 
       <Layouts.Content>
-        {/* Filters Section */}
         <Box
           background="neutral0"
           hasRadius
@@ -381,8 +393,8 @@ const HomePage = () => {
                 id: getTrad("filter.user"),
               })}
               value={filters.user}
-              onChange={(e) =>
-                handleFilterChange({ ...filters, user: e.target.value })
+              onChange={(event) =>
+                handleFilterChange({ ...filters, user: event.target.value })
               }
             />
             <SingleSelect
@@ -395,7 +407,7 @@ const HomePage = () => {
               }
               onClear={() => handleFilterChange({ ...filters, actionType: "" })}
             >
-              {getFilterActionTypes().map((actionType) => (
+              {ACTION_TYPES.map((actionType) => (
                 <SingleSelectOption key={actionType} value={actionType}>
                   {formatMessage({
                     id: getTrad(actionType),
@@ -419,14 +431,11 @@ const HomePage = () => {
           </Box>
         ) : (
           <>
-            <Table
-              colCount={config.indexTableColumns.length}
-              rowCount={logs.length}
-            >
+            <Table colCount={displayColumns.length + 1} rowCount={logs.length}>
               <Thead>
                 <Tr>
-                  {config.indexTableColumns.map((column) => (
-                    <Th>
+                  {displayColumns.map((column) => (
+                    <Th key={column}>
                       <Typography variant="sigma">
                         {formatMessage({
                           id: getTrad(`table.${column}`),
@@ -434,113 +443,94 @@ const HomePage = () => {
                       </Typography>
                     </Th>
                   ))}
+                  <Th key="actions">
+                    <Typography variant="sigma">
+                      {formatMessage({
+                        id: getTrad("table.actions"),
+                      })}
+                    </Typography>
+                  </Th>
                 </Tr>
               </Thead>
               <Tbody>
                 {logs.map((log) => (
                   <Tr key={log.id}>
-                    {config.indexTableColumns.map((column) => {
-                      if (column === "action") {
-                        return (
-                          <Td key={column}>
-                            {getActionBadge(
-                              log.action,
-                              formatMessage({
-                                id: getTrad(log.action),
-                              }),
-                            )}
-                          </Td>
-                        );
-                      } else if (column === "date") {
-                        return (
-                          <Td key={column}>
-                            <Typography variant="sigma">
-                              {formatDateString(log.date)}
-                            </Typography>
-                          </Td>
-                        );
-                      } else if (column === "user") {
-                        return (
-                          <Td key={column}>
-                            <Typography variant="sigma">
-                              {getUserDisplay(log.user)}
-                            </Typography>
-                          </Td>
-                        );
-                      } else if (column === "method") {
-                        return (
-                          <Td key={column}>
-                            <Typography variant="sigma">
-                              {log.method || "-"}
-                            </Typography>
-                          </Td>
-                        );
-                      } else if (column === "status") {
-                        return (
-                          <Td key={column}>
-                            {log.statusCode && (
-                              <Typography
-                                style={getStatusBadgeStyle(log.statusCode)}
-                              >
-                                {log.statusCode}
+                    {displayColumns.map((column) => {
+                      switch (column) {
+                        case "action":
+                          return (
+                            <Td key={column}>
+                              {getActionBadge(
+                                log.action,
+                                formatMessage({
+                                  id: getTrad(log.action),
+                                }),
+                              )}
+                            </Td>
+                          );
+                        case "date":
+                          return (
+                            <Td key={column}>
+                              <Typography variant="sigma">
+                                {formatDateString(log.date)}
                               </Typography>
-                            )}
-                          </Td>
-                        );
-                      } else if (column === "ipAddress") {
-                        return (
-                          <Td key={column}>
-                            <Typography variant="sigma">
-                              {log.ipAddress || "-"}
-                            </Typography>
-                          </Td>
-                        );
-                      } else if (column === "uid") {
-                        console.log({ column, log });
-
-                        if (
-                          !log.endpoint.includes(
-                            "/content-manager/collection-types",
-                          )
-                        )
-                          return <Td key={column}></Td>;
-
-                        return (
-                          <Td key={column}>
-                            <Box marginBottom={2}>
-                              <Typography variant="epsilon">
-                                {log.payload.data.data?.title || ""}
+                            </Td>
+                          );
+                        case "user":
+                          return (
+                            <Td key={column}>
+                              <Typography variant="sigma">
+                                {getUserDisplay(log.user)}
                               </Typography>
-                            </Box>
-                            <Typography variant="sigma">
-                              {formatMessage({
-                                id: log.payload.uid,
-                              })}
-                            </Typography>
-                          </Td>
-                        );
-                      } else if (column === "entry") {
-                        console.log({ column, log });
-
-                        if (
-                          !log.endpoint.includes(
-                            "/content-manager/collection-types",
-                          )
-                        )
-                          return <Td key={column}></Td>;
-
-                        return (
-                          <Td key={column}>
-                            <LinkButton
-                              variant="secondary"
-                              href={`/admin/content-manager/collection-types/${log.payload.uid}/${log.payload.id}`}
-                            >
-                              {formatMessage({
-                                id: getTrad("entry.show"),
-                              })}
-                            </LinkButton>
-                          </Td>
-                        );
+                            </Td>
+                          );
+                        case "method":
+                          return (
+                            <Td key={column}>
+                              <Typography variant="sigma">
+                                {log.method || "-"}
+                              </Typography>
+                            </Td>
+                          );
+                        case "status":
+                          return (
+                            <Td key={column}>
+                              {log.statusCode ? (
+                                <Typography
+                                  style={getStatusBadgeStyle(log.statusCode)}
+                                >
+                                  {log.statusCode}
+                                </Typography>
+                              ) : (
+                                <Typography variant="sigma">-</Typography>
+                              )}
+                            </Td>
+                          );
+                        case "ipAddress":
+                          return (
+                            <Td key={column}>
+                              <Typography variant="sigma">
+                                {log.ipAddress || "-"}
+                              </Typography>
+                            </Td>
+                          );
+                        case "entry":
+                          return (
+                            <Td key={column}>
+                              {canOpenEntry(log) ? (
+                                <LinkButton
+                                  variant="secondary"
+                                  href={`/admin/content-manager/collection-types/${log.payload.uid}/${log.payload.id}`}
+                                >
+                                  {formatMessage({
+                                    id: getTrad("entry.show"),
+                                  })}
+                                </LinkButton>
+                              ) : null}
+                            </Td>
+                          );
+                        default:
+                          return <Td key={column} />;
                       }
                     })}
                     <Td>
@@ -567,10 +557,8 @@ const HomePage = () => {
               </Tbody>
             </Table>
 
-            {/* Pagination */}
             {pagination.pageCount > 1 && (
               <Box paddingTop={4} paddingBottom={6}>
-                {/* Page size selector */}
                 <Flex
                   justifyContent="space-between"
                   alignItems="center"
@@ -588,8 +576,8 @@ const HomePage = () => {
                       onChange={(value) => {
                         setPagination({
                           ...pagination,
-                          pageSize: parseInt(value),
-                          page: 1, // Reset to first page when changing page size
+                          pageSize: parseInt(value, 10),
+                          page: 1,
                         });
                       }}
                     >
@@ -659,7 +647,6 @@ const HomePage = () => {
                     →
                   </Button>
 
-                  {/* Quick jump to pages */}
                   <Flex gap={1} paddingLeft={2}>
                     {[
                       1,
@@ -689,7 +676,10 @@ const HomePage = () => {
                             }
                             size="S"
                             onClick={() =>
-                              setPagination({ ...pagination, page })
+                              setPagination({
+                                ...pagination,
+                                page,
+                              })
                             }
                           >
                             {page}
@@ -704,7 +694,6 @@ const HomePage = () => {
         )}
       </Layouts.Content>
 
-      {/* Modal */}
       {isModalOpen && (
         <Dialog.Root open={isModalOpen} onOpenChange={setIsModalOpen}>
           <Dialog.Content
@@ -737,9 +726,8 @@ const HomePage = () => {
                   <Loader />
                   <Typography paddingTop={2}>
                     {formatMessage({
-                      id: getTrad("loading"),
-                    })}{" "}
-                    log details...
+                      id: getTrad("loading.details"),
+                    })}
                   </Typography>
                 </Box>
               ) : (
@@ -757,12 +745,7 @@ const HomePage = () => {
                         })}
                         :
                       </Typography>
-                      <Box
-                        padding={1}
-                        paddingLeft={2}
-                        paddingRight={2}
-                        hasRadius
-                      >
+                      <Box padding={1} paddingLeft={2} paddingRight={2} hasRadius>
                         {getActionBadge(
                           selectedLog.action,
                           formatMessage({
@@ -777,26 +760,13 @@ const HomePage = () => {
                         {formatMessage({
                           id: getTrad("modal.date"),
                         })}
+                        :
                       </Typography>
                       <Typography variant="pi">
-                        {(() => {
-                          if (!selectedLog.date && !selectedLog.createdAt)
-                            return "-";
-                          const dateValue =
-                            selectedLog.date || selectedLog.createdAt;
-                          try {
-                            const date = new Date(dateValue);
-                            if (isNaN(date.getTime())) return dateValue;
-
-                            // using undefined, so that the browsers locale gets used
-                            return new Intl.DateTimeFormat(undefined, {
-                              dateStyle: "full",
-                              timeStyle: "long",
-                            }).format(date);
-                          } catch {
-                            return dateValue || "-";
-                          }
-                        })()}
+                        {formatDateString(selectedLog.date || selectedLog.createdAt, {
+                          dateStyle: "full",
+                          timeStyle: "long",
+                        })}
                       </Typography>
                     </Flex>
 
@@ -939,10 +909,7 @@ const HomePage = () => {
                         >
                           <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
                             {(() => {
-                              const data =
-                                selectedLog.payload || selectedLog.data;
-
-                              // Filter out fields that are already displayed above
+                              const data = selectedLog.payload || selectedLog.data;
                               const fieldsToExclude = [
                                 "endpoint",
                                 "url",
@@ -955,14 +922,15 @@ const HomePage = () => {
 
                               const filteredData = Object.keys(data)
                                 .filter((key) => !fieldsToExclude.includes(key))
-                                .reduce((obj, key) => {
-                                  obj[key] = data[key];
-                                  return obj;
+                                .reduce((result, key) => {
+                                  result[key] = data[key];
+                                  return result;
                                 }, {});
 
-                              // If there's no unique data left, show a message
                               if (Object.keys(filteredData).length === 0) {
-                                return "No additional data to display";
+                                return formatMessage({
+                                  id: getTrad("modal.noAdditionalData"),
+                                });
                               }
 
                               return JSON.stringify(filteredData, null, 2);

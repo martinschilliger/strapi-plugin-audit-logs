@@ -3,6 +3,8 @@
   "plugin.description": "Track and manage audit logs for your Strapi application",
   "page.title": "Audit Logs",
   "page.subtitle": "Logs of the activities that happened in the environment",
+  "fallback.system": "System",
+  "fallback.user": "User",
   "table.action": "Action",
   "table.actionType": "Action Type",
   "table.date": "Date",
@@ -50,8 +52,10 @@
   "modal.requestBody": "Request Body",
   "modal.responseBody": "Response Body",
   "modal.payload": "Payload Data",
+  "modal.noAdditionalData": "No additional data to display",
   "modal.close": "Close",
   "loading": "Loading...",
+  "loading.details": "Loading log details...",
   "filter.action": "Filter by Action",
   "filter.user": "Search by User",
   "filter.actionType": "Action Type",
@@ -77,5 +81,5 @@
   "role.delete": "Role Delete",
   "admin.auth.success": "Login",
   "admin.auth.failure": "Login Failure",
-  "admin.Logout": "Logout"
+  "admin.logout": "Logout"
 }

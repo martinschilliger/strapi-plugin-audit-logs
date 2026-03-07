@@ -1,9 +1,12 @@
+const { DEFAULT_INDEX_TABLE_COLUMNS } = require("../config/admin-panel");
+
 module.exports = {
   async get(ctx) {
-    const pluginConfig =
-      strapi.config.get("plugin::audit-logs") ||
-      strapi.plugin("audit-logs").config;
+    const pluginConfig = strapi.config.get("plugin::audit-logs", {});
 
-    ctx.body = pluginConfig.adminPanelConfig;
+    ctx.body = {
+      indexTableColumns:
+        pluginConfig.adminPanel?.indexTableColumns || DEFAULT_INDEX_TABLE_COLUMNS,
+    };
   },
 };
